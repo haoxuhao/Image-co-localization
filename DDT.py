@@ -1,3 +1,4 @@
+#encoding=utf-8
 import argparse
 import torch
 import torchvision.models as models
@@ -100,10 +101,7 @@ class DDT(object):
     def max_conn_mask(self, P, origin_height, origin_width):
         h, w = P.shape[0], P.shape[1]
         highlight = np.zeros(P.shape)
-        for i in range(h):
-            for j in range(w):
-                if P[i][j] > 0:
-                    highlight[i][j] = 1
+        highlight[np.where(P > 0)] = 1
 
         # 寻找最大的全联通分量
         labels = measure.label(highlight, neighbors=4, background=0)
@@ -143,7 +141,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--traindir', type=str, default='./data/car', help="the train data folder path.")
     parser.add_argument('--testdir', type=str, default='./data/car', help="the test data folder path.")
-    parser.add_argument('--savedir', type=str, default='./data/result/car/', help="the final result saving path. ")
+    parser.add_argument('--savedir', type=str, default='./data/result/car', help="the final result saving path. ")
     parser.add_argument("--gpu", type=str, default="", help="cuda device to run")
     args = parser.parse_args()
 
@@ -151,6 +149,7 @@ if __name__=="__main__":
         os.makedirs(args.savedir)
     if args.gpu != "":
         use_cuda=True
+        os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
     else:
         use_cuda=False
     ddt = DDT(use_cuda=use_cuda)
