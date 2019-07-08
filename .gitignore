@@ -118,3 +118,4 @@ venv.bak/
 datasets/
 
 data/result/voc*
+__pycache__/*

@@ -5,7 +5,6 @@ import os.path as osp
 from utils import iou_one2many, parse_rec, gen_voc_imageids
 import numpy as np
 
-
 def load_voc_gts(img_ids, ann_dir):
     '''
     load voc style gts
