@@ -12,7 +12,9 @@ import cv2
 from ImageSet import ImageSet
 import os.path as osp
 import os
-from utils import gen_voc_imageids
+from utils import gen_voc_imageids, gen_objdis_imageids
+from config import Dataset
+from tqdm import tqdm
 
 class DDT(object):
     def __init__(self, use_cuda=False):
@@ -36,9 +38,8 @@ class DDT(object):
         train_dataset = ImageSet(traindir, image_ids=image_ids, resize=1000)
 
         descriptors = np.zeros((1, 512))
-
-        for index in range(len(train_dataset)):
-            print("processing "+str(index)+"th training images.")
+        print("fiting...")
+        for index in tqdm(range(len(train_dataset))):
             image = train_dataset[index]
             h, w = image.shape[:2]
             image = self.normalize(self.totensor(image)).view(1, 3, h, w)
@@ -66,9 +67,9 @@ class DDT(object):
         # test_dataset = ImageSet(testdir, resize=1000)
         if self.use_cuda:
             descriptor_mean_tensor = descriptor_mean_tensor.cuda()
-
+        print("colocate...")
         result_file = open(osp.join(savedir, "result.txt"), "w")
-        for index in range(len(test_dataset)):
+        for index in tqdm(range(len(test_dataset))):
             image = test_dataset[index]
             img_id = osp.basename(test_dataset.img_paths[index]).split(".")[0]
             origin_image = image.copy()
@@ -103,7 +104,7 @@ class DDT(object):
                 cv2.rectangle(mask_3, (x,y), (x+w, y+h), (0, 255, 0), 2) 
                 result_file.write(img_id + " {} {} {} {}\n".format(x, y, x+w, y+h))
 
-            print("save the " + str(index) + "th image. ")
+            #print("save the " + str(index) + "th image. ")
             cv2.imwrite(osp.join(savedir, img_id + ".jpg"), mask_3)
         result_file.close()
 
@@ -111,18 +112,22 @@ class DDT(object):
         h, w = P.shape[0], P.shape[1]
         highlight = np.zeros(P.shape)
         highlight[np.where(P > 0)] = 1
-
-        # 寻找最大的全联通分量
-        labels = measure.label(highlight, neighbors=4, background=0)
-        props = measure.regionprops(labels)
-        max_index = 0
-        for i in range(len(props)):
-            if props[i].area > props[max_index].area:
-                max_index = i
-        max_prop = props[max_index]
         highlights_conn = np.zeros(highlight.shape)
-        for each in max_prop.coords:
-            highlights_conn[each[0]][each[1]] = 1
+
+        if np.sum(highlight) > 1: #no object in this image
+            # 寻找最大的全联通分量
+            labels = measure.label(highlight, neighbors=4, background=0)
+            props = measure.regionprops(labels)
+            
+            max_index = 0
+            for i in range(len(props)):
+                if props[i].area > props[max_index].area:
+                    max_index = i
+            
+            max_prop = props[max_index]
+            
+            for each in max_prop.coords:
+                highlights_conn[each[0]][each[1]] = 1
 
         # 最近邻插值：
         highlight_big = cv2.resize(highlights_conn,
@@ -157,11 +162,28 @@ if __name__=="__main__":
     parser.add_argument("--gpu", type=str, default="0", help="cuda device to run")
     args = parser.parse_args()
 
-    category="cat" #"aeroplane"
-    args.traindir = "./datasets/VOC2007/JPEGImages"
-    args.testdir = "./datasets/VOC2007/JPEGImages"
-    args.savedir = "./data/result/voc-%s"%category
+    args.dataset_type = "voc07"
+    category="aeroplane" #"aeroplane"
 
+    if args.dataset_type == Dataset.voc07:
+        if not category in Dataset.voc_classes:
+            raise Exception("no such category: %s in dataset %s"%(category, args.dataset_type)) 
+        args.traindir = "./datasets/VOC2007/JPEGImages"
+        args.testdir = "./datasets/VOC2007/JPEGImages"
+        args.savedir = "./data/result/%s-%s"%(args.dataset_type, category)
+        val_image_ids = gen_voc_imageids("./datasets/VOC2007", category)
+    elif args.dataset_type == Dataset.objdis:
+        if not category in Dataset.objdis_classes:
+            raise Exception("no such category: %s in dataset %s"%(category, args.dataset_type)) 
+        args.traindir = "./datasets/ObjectDiscovery-data/Data/%s100"%category
+        args.testdir = "./datasets/ObjectDiscovery-data/Data/%s100"%category
+        args.savedir = "./data/result/%s-%s100"%(args.dataset_type, category)
+        val_image_ids = gen_objdis_imageids(args.traindir)
+    else:
+        raise Exception("no such dataset type: %s"%args.dataset_type)
+
+    print("images of category: %s: %d"%(category, len(val_image_ids)))
+    
     if not osp.exists(args.savedir):
         os.makedirs(args.savedir)
     if args.gpu != "":
@@ -170,9 +192,6 @@ if __name__=="__main__":
     else:
         use_cuda=False
 
-    val_image_ids = gen_voc_imageids("./datasets/VOC2007", category)
-    print("images of category: %s: %d"%(category, len(val_image_ids)))
-    
     ddt = DDT(use_cuda=use_cuda)
     trans_vectors, descriptor_means = ddt.fit(args.traindir, image_ids=val_image_ids)
     ddt.co_locate(args.testdir, args.savedir, trans_vectors, descriptor_means, image_ids=val_image_ids)

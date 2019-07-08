@@ -78,10 +78,10 @@ def parse_rec(filename):
     objects = []
     for obj in tree.findall('object'):
         obj_struct = {}
-        obj_struct['name'] = obj.find('name').text
-        obj_struct['pose'] = obj.find('pose').text
-        obj_struct['truncated'] = int(obj.find('truncated').text)
-        obj_struct['difficult'] = int(obj.find('difficult').text)
+        obj_struct['name'] = obj.find('name').text if obj.find('name') is not None else "nknown"
+        obj_struct['pose'] = obj.find('pose').text if obj.find('pose') is not None else "nknown"
+        obj_struct['truncated'] = int(obj.find('truncated').text) if obj.find('truncated') is not None else 0
+        obj_struct['difficult'] = int(obj.find('difficult').text) if obj.find('difficult') is not None else 0
         bbox = obj.find('bndbox')
         obj_struct['bbox'] = [int(bbox.find('xmin').text),
                               int(bbox.find('ymin').text),
@@ -123,8 +123,16 @@ def gen_voc_imageids(data_root, category):
                 skiped.append(imageid)
 
 
-    print("skip: %s"%str(skiped))
+    #print("skip: %s"%str(skiped))
     return ret
+
+def gen_objdis_imageids(image_dir):
+	imageids = []
+	for file in os.listdir(image_dir):
+		if file.find(".jpg") != -1:
+			imageids.append(file.split(".")[0])
+
+	return imageids
 
 if __name__ == "__main__":
     #test one to many iou

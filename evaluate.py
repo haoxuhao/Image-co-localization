@@ -1,9 +1,13 @@
+#!/usr/bin/env python
 #encoding=utf-8
 
 import os
 import os.path as osp
-from utils import iou_one2many, parse_rec, gen_voc_imageids
+from utils import iou_one2many, parse_rec, gen_voc_imageids, gen_objdis_imageids
 import numpy as np
+from config import Dataset
+import argparse
+
 
 def load_voc_gts(img_ids, ann_dir):
     '''
@@ -44,16 +48,53 @@ def eval_corloc(result_file, gts, iou_thresh=0.5):
 
     return corloc
                 
-        
-def main():
-    #eval voc dataset
-    category = "cat" #"aeroplane"
+def voc_eval(category, dataset_type):
     val_image_ids = gen_voc_imageids("./datasets/VOC2007",category)
     print("len of val image ids: %d"%len(val_image_ids))
+
     gts = load_voc_gts(val_image_ids, "./datasets/VOC2007/Annotations")
-    result_file = "./data/result/voc-%s/result.txt"%category
+    result_file = "./data/result/%s-%s/result.txt"%(dataset_type, category)
     corloc = eval_corloc(result_file, gts)
+
     print("corloc: %.3f"%corloc)
+
+def objdis_eval(category, dataset_type):
+    val_image_ids = gen_objdis_imageids("./datasets/ObjectDiscovery-data/Data/%s100"%category)
+    print("len of val image ids: %d"%len(val_image_ids))
+
+    gts = load_voc_gts(val_image_ids, "./datasets/ObjectDiscovery-data/Data/%s100-bbox-ann"%category)
+    result_file = "./data/result/%s-%s100/result.txt"%(dataset_type,category)
+    corloc = eval_corloc(result_file, gts)
+
+    print("corloc: %.3f"%corloc)
+
+
+def parse_arg():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--dataset_type", "-dset_type", type=str, default="voc07", help="dataset type")
+    parser.add_argument("--category", "-cate", type=str, default="aeroplane", help="category")
+
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_arg()
+    args.category = "aeroplane" 
+    args.dataset_type = "voc07"
+    print("dataset type: %s"%args.dataset_type)
+    print("category: %s"%args.category)
+
+    if args.dataset_type == Dataset.voc07:
+        if not args.category in Dataset.voc_classes:
+            raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
+        voc_eval(args.category, args.dataset_type)
+    elif args.dataset_type == Dataset.objdis:
+        if not args.category in Dataset.objdis_classes:
+            raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
+        objdis_eval(args.category, args.dataset_type)
+    else:
+        raise Exception("no such dataset type: %s" % args.dataset_type)
 
 if __name__ == "__main__":
     main()

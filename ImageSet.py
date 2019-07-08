@@ -13,7 +13,6 @@ class ImageSet(Dataset):
             files = [id + ".jpg" for id in image_ids]
         else:
             files = os.listdir(folder_path)
-        print(files)
         self.images = []
         self.img_paths = []
         for file in files:

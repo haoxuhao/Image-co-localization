@@ -119,3 +119,4 @@ datasets/
 
 data/result/voc*
 __pycache__/*
+data/result/objdis*

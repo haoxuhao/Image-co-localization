@@ -11,9 +11,11 @@ import cv2
 from ImageSet import ImageSet
 import os.path as osp
 import os
+from DDT import DDT
+from tqdm import tqdm
 
 
-class DDTplus(object):
+class DDTplus(DDT):
     def __init__(self, selected_layers=(34, 36), use_cuda=True):
         assert(len(selected_layers) == 2)
         self.selected_layers = selected_layers
@@ -32,14 +34,14 @@ class DDTplus(object):
                                      std=[0.229, 0.224, 0.225])
         self.totensor = transforms.ToTensor()
 
-    def fit(self, traindir):
-        train_dataset = ImageSet(traindir, resize=1000)
+    def fit(self, traindir, image_ids=None):
+        train_dataset = ImageSet(traindir, image_ids=image_ids, resize=1000)
 
         descriptors0 = np.zeros((1, 512))
         descriptors1 = np.zeros((1, 512))
-
-        for index in range(len(train_dataset)):
-            print("processing "+str(index)+"th training images.")
+        print("fiting...")
+        for index in tqdm(range(len(train_dataset))):
+            #print("processing "+str(index)+"th training images.")
             image = train_dataset[index]
             h, w = image.shape[:2]
             image = self.normalize(self.totensor(image)).view(1, 3, h, w)
@@ -76,10 +78,13 @@ class DDTplus(object):
 
         return (trans_vec0, trans_vec1), [descriptors0_mean_tensor, descriptors1_mean_tensor]
 
-    def co_locate(self, testdir, savedir, trans_vectors, descriptor_mean_tensors):
-        test_dataset = ImageSet(testdir, resize=1000)
-        for index in range(len(test_dataset)):
+    def co_locate(self, testdir, savedir, trans_vectors, descriptor_mean_tensors, image_ids=None):
+        test_dataset = ImageSet(testdir, image_ids=image_ids, resize=1000)
+        result_file = open(osp.join(savedir, "result.txt"), "w")
+        print("colocate...")
+        for index in tqdm(range(len(test_dataset))):
             image = test_dataset[index]
+            img_id = osp.basename(test_dataset.img_paths[index]).split(".")[0]
             origin_image = image.copy()
             origin_height, origin_width = origin_image.shape[:2]
             image = self.normalize(self.totensor(image)).view(1, 3, origin_height, origin_width)
@@ -126,50 +131,14 @@ class DDTplus(object):
             mask_3 = np.array(mask_3, dtype=np.uint8)
 
             #draw bboxes
+            if len(bboxes) == 0:
+                result_file.write(img_id + "\n")
             for (x, y, w, h) in bboxes:
                 cv2.rectangle(mask_3, (x,y), (x+w, y+h), (0, 255, 0), 2) 
-            print("save the " + str(index) + "th image. ")
-            cv2.imwrite(osp.join(savedir, str(index) + ".jpg"), mask_3)
+                result_file.write(img_id + " {} {} {} {}\n".format(x, y, x+w, y+h))
 
-    def max_conn_mask(self, P, origin_height, origin_width):
-        h, w = P.shape[0], P.shape[1]
-        highlight = np.zeros(P.shape)
-        for i in range(h):
-            for j in range(w):
-                if P[i][j] > 0:
-                    highlight[i][j] = 1
-
-        # 寻找最大的全联通分量
-        labels = measure.label(highlight, neighbors=4, background=0)
-        props = measure.regionprops(labels)
-        max_index = 0
-        for i in range(len(props)):
-            if props[i].area > props[max_index].area:
-                max_index = i
-        max_prop = props[max_index]
-        highlights_conn = np.zeros(highlight.shape)
-        for each in max_prop.coords:
-            highlights_conn[each[0]][each[1]] = 1
-
-        # 最近邻插值：
-        highlight_big = cv2.resize(highlights_conn,
-                                   (origin_width, origin_height),
-                                   interpolation=cv2.INTER_NEAREST)
-
-        highlight_big = np.array(highlight_big, dtype=np.uint16).reshape(1, origin_height, origin_width)
-        #highlight_3 = np.concatenate((np.zeros((2, origin_height, origin_width), dtype=np.uint16), highlight_big * 255), axis=0)
-        return highlight_big
-    def get_bboxes(self, bin_img):
-        img = np.squeeze(bin_img.copy().astype(np.uint8), axis=(0,))
-        _, contours, hierarchy= cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        bboxes=[]
-        for c in contours:
-            # find bounding box coordinates
-            # 现计算出一个简单的边界框
-            # c = np.squeeze(c, axis=(1,))
-            rect = cv2.boundingRect(c)
-            bboxes.append(rect)
-        return bboxes
+            # print("save the " + str(index) + "th image. ")
+            cv2.imwrite(osp.join(savedir, img_id + ".jpg"), mask_3)
 
 
 if __name__=="__main__":
@@ -178,7 +147,7 @@ if __name__=="__main__":
     parser.add_argument('--testdir', type=str, default='./data/car', help="the test data folder path.")
     parser.add_argument('--savedir', type=str, default='./data/result/car', help="the final result saving path. ")
     parser.add_argument('--select_layers', type=tuple, default=(34, 36), help="two selected layers index. Note that the output channel should be 512. ")
-    parser.add_argument("--gpu", type=str, default="", help="cuda device to run")
+    parser.add_argument("--gpu", type=str, default="0", help="cuda device to run")
     args = parser.parse_args()
     if not osp.exists(args.savedir):
         os.makedirs(args.savedir)
