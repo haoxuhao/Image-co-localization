@@ -12,6 +12,7 @@ import cv2
 from ImageSet import ImageSet
 import os.path as osp
 import os
+from utils import gen_voc_imageids
 
 class DDT(object):
     def __init__(self, use_cuda=False):
@@ -31,8 +32,8 @@ class DDT(object):
                                      std=[0.229, 0.224, 0.225])
         self.totensor = transforms.ToTensor()
 
-    def fit(self, traindir):
-        train_dataset = ImageSet(traindir, resize=1000)
+    def fit(self, traindir, image_ids=None):
+        train_dataset = ImageSet(traindir, image_ids=image_ids, resize=1000)
 
         descriptors = np.zeros((1, 512))
 
@@ -60,12 +61,16 @@ class DDT(object):
         trans_vec = pca.components_[0]
         return trans_vec, descriptors_mean_tensor
 
-    def co_locate(self, testdir, savedir, trans_vector, descriptor_mean_tensor):
-        test_dataset = ImageSet(testdir, resize=1000)
+    def co_locate(self, testdir,  savedir, trans_vector, descriptor_mean_tensor, image_ids=None):
+        test_dataset = ImageSet(testdir, image_ids=image_ids, resize=1000)
+        # test_dataset = ImageSet(testdir, resize=1000)
         if self.use_cuda:
             descriptor_mean_tensor = descriptor_mean_tensor.cuda()
+
+        result_file = open(osp.join(savedir, "result.txt"), "w")
         for index in range(len(test_dataset)):
             image = test_dataset[index]
+            img_id = osp.basename(test_dataset.img_paths[index]).split(".")[0]
             origin_image = image.copy()
             origin_height, origin_width = origin_image.shape[:2]
             image = self.normalize(self.totensor(image)).view(1, 3, origin_height, origin_width)
@@ -92,11 +97,15 @@ class DDT(object):
             mask_3 = np.array(mask_3, dtype=np.uint8)
 
             #draw bboxes
+            if len(bboxes) == 0:
+                result_file.write(img_id + "\n")
             for (x, y, w, h) in bboxes:
                 cv2.rectangle(mask_3, (x,y), (x+w, y+h), (0, 255, 0), 2) 
+                result_file.write(img_id + " {} {} {} {}\n".format(x, y, x+w, y+h))
 
             print("save the " + str(index) + "th image. ")
-            cv2.imwrite(osp.join(savedir, str(index) + ".jpg"), mask_3)
+            cv2.imwrite(osp.join(savedir, img_id + ".jpg"), mask_3)
+        result_file.close()
 
     def max_conn_mask(self, P, origin_height, origin_width):
         h, w = P.shape[0], P.shape[1]
@@ -142,8 +151,13 @@ if __name__=="__main__":
     parser.add_argument('--traindir', type=str, default='./data/car', help="the train data folder path.")
     parser.add_argument('--testdir', type=str, default='./data/car', help="the test data folder path.")
     parser.add_argument('--savedir', type=str, default='./data/result/car', help="the final result saving path. ")
-    parser.add_argument("--gpu", type=str, default="", help="cuda device to run")
+    parser.add_argument("--gpu", type=str, default="0", help="cuda device to run")
     args = parser.parse_args()
+
+    category="cat" #"aeroplane"
+    args.traindir = "./datasets/VOC2007/JPEGImages"
+    args.testdir = "./datasets/VOC2007/JPEGImages"
+    args.savedir = "./data/result/voc-%s"%category
 
     if not osp.exists(args.savedir):
         os.makedirs(args.savedir)
@@ -152,6 +166,10 @@ if __name__=="__main__":
         os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
     else:
         use_cuda=False
+
+    val_image_ids = gen_voc_imageids("./datasets/VOC2007", category)
+    print("images of category: %s: %d"%len(val_image_ids))
+    
     ddt = DDT(use_cuda=use_cuda)
-    trans_vectors, descriptor_means = ddt.fit(args.traindir)
-    ddt.co_locate(args.testdir, args.savedir, trans_vectors, descriptor_means)
+    trans_vectors, descriptor_means = ddt.fit(args.traindir, image_ids=val_image_ids)
+    ddt.co_locate(args.testdir, args.savedir, trans_vectors, descriptor_means, image_ids=val_image_ids)

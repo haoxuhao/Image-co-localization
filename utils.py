@@ -1,4 +1,7 @@
 import numpy as np
+import xml.etree.ElementTree as ET
+import os.path as osp
+import os
 
 '''
 borrowed from darknet
@@ -69,9 +72,68 @@ def iou_one2many(bb, BBGT):
     jmax = np.argmax(overlaps)
     return ovmax, jmax
 
+def parse_rec(filename):
+    """ Parse a PASCAL VOC xml file """
+    tree = ET.parse(open(filename, encoding="utf-8"))
+    objects = []
+    for obj in tree.findall('object'):
+        obj_struct = {}
+        obj_struct['name'] = obj.find('name').text
+        obj_struct['pose'] = obj.find('pose').text
+        obj_struct['truncated'] = int(obj.find('truncated').text)
+        obj_struct['difficult'] = int(obj.find('difficult').text)
+        bbox = obj.find('bndbox')
+        obj_struct['bbox'] = [int(bbox.find('xmin').text),
+                              int(bbox.find('ymin').text),
+                              int(bbox.find('xmax').text),
+                              int(bbox.find('ymax').text)]
+        objects.append(obj_struct)
+
+    return objects
+
+def gen_voc_imageids(data_root, category):
+    if not osp.exists(data_root):
+        raise IOError("no such directory: %s"%data_root)
+
+    layout_category = osp.join(data_root,"ImageSets/Main", category+"_trainval.txt")
+    ann_dir = osp.join(data_root, "Annotations")
+    
+    with open(layout_category, "r") as f:
+        lines = [line.strip("\n") for line in f.readlines()]
+
+    ret=[]        
+    org_count=0
+    skiped=[]
+    for line in lines:
+        split_tmp = line.split()
+        imageid, tag = split_tmp
+        if tag == "1":
+            xml_file = osp.join(ann_dir, imageid + ".xml")
+            xml_info = parse_rec(xml_file)
+            org_count+=1
+            # print(org_count)
+            add_flag=False
+            for obj in xml_info:
+                if obj['name']==category and obj["difficult"] == 0 and obj["truncated"] == 0:
+                    add_flag=True
+                    break
+            if add_flag:
+                ret.append(imageid)
+            else:
+                skiped.append(imageid)
+
+
+    print("skip: %s"%str(skiped))
+    return ret
+
 if __name__ == "__main__":
     #test one to many iou
     bb = np.array([20, 30, 50, 50])
     BBGT = np.array([[20, 30, 50, 50], [25, 35, 65, 50], [0, 0, 0, 0]])
     iou, idx = iou_one2many(bb, BBGT)
-    print(iou, idx)
+    print("iou test: ", iou, idx)
+
+    #test 
+    ret = gen_voc_imageids("./datasets/VOC2007","aeroplane")
+    print(ret)
+    print(len(ret))
