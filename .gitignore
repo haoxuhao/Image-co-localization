@@ -116,3 +116,5 @@ venv.bak/
 
 #datasets
 datasets/
+
+data/result/voc*

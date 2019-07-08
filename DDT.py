@@ -134,8 +134,11 @@ class DDT(object):
         return highlight_big
     def get_bboxes(self, bin_img):
         img = np.squeeze(bin_img.copy().astype(np.uint8), axis=(0,))
-
-        _, contours, hierarchy= cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if int((cv2.__version__).split(".")[0]) >= 4.0:
+            contours, hierarchy= cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, contours, hierarchy= cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
         bboxes=[]
         for c in contours:
             # find bounding box coordinates
@@ -168,7 +171,7 @@ if __name__=="__main__":
         use_cuda=False
 
     val_image_ids = gen_voc_imageids("./datasets/VOC2007", category)
-    print("images of category: %s: %d"%len(val_image_ids))
+    print("images of category: %s: %d"%(category, len(val_image_ids)))
     
     ddt = DDT(use_cuda=use_cuda)
     trans_vectors, descriptor_means = ddt.fit(args.traindir, image_ids=val_image_ids)

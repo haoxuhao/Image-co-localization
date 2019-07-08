@@ -48,10 +48,11 @@ def eval_corloc(result_file, gts, iou_thresh=0.5):
         
 def main():
     #eval voc dataset
-    val_image_ids = gen_voc_imageids("./datasets/VOC2007","aeroplane")
+    category = "cat" #"aeroplane"
+    val_image_ids = gen_voc_imageids("./datasets/VOC2007",category)
     print("len of val image ids: %d"%len(val_image_ids))
     gts = load_voc_gts(val_image_ids, "./datasets/VOC2007/Annotations")
-    result_file = "./data/result/voc-temp/result.txt"
+    result_file = "./data/result/voc-%s/result.txt"%category
     corloc = eval_corloc(result_file, gts)
     print("corloc: %.3f"%corloc)
 
