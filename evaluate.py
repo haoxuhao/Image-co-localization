@@ -50,10 +50,10 @@ def eval_corloc(result_file, gts, iou_thresh=0.5):
 
     return corloc
                 
-def voc_eval(category, dataset_type):
-    val_image_ids = gen_voc_imageids("./datasets/VOC2007",category)
+def voc_eval(category, dataset_type, dataset_root="./datasets/VOC2007"):
+    val_image_ids = gen_voc_imageids(dataset_root,category)
 
-    gts = load_voc_gts(val_image_ids, "./datasets/VOC2007/Annotations")
+    gts = load_voc_gts(val_image_ids, osp.join(dataset_root, "Annotations"))
     result_file = "./data/result/%s-%s/result.txt"%(dataset_type, category)
     corloc = eval_corloc(result_file, gts)
 
@@ -80,11 +80,13 @@ def parse_arg():
 
 def main():
     args = parse_arg()
-    args.dataset_type = "objdis"
+    args.dataset_type = "voc12"
     if args.dataset_type == Dataset.objdis:
         args.categories = Dataset.objdis_classes
     elif args.dataset_type == Dataset.voc07:
-        args.categories = Dataset.voc_classes#["Airplane"] 
+        args.categories = Dataset.voc_classes#["Airplane"]
+    elif args.dataset_type == Dataset.voc12:
+        args.categories = Dataset.voc_classes 
     else:
         raise Exception("unkonwn dataset type: %s"%args.dataset_type)
 
@@ -105,6 +107,12 @@ def main():
             if not args.category in Dataset.objdis_classes:
                 raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
             ret=objdis_eval(args.category, args.dataset_type)
+            result_avg+=ret
+            result_all[category] = "%.1f"%(ret*100)
+        elif args.dataset_type == Dataset.voc12:
+            if not args.category in Dataset.voc_classes:
+                raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
+            ret=voc_eval(args.category, args.dataset_type, dataset_root="./datasets/VOC2012")
             result_avg+=ret
             result_all[category] = "%.1f"%(ret*100)
         else:

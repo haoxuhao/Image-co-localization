@@ -9,7 +9,7 @@ import numpy as np
 from numpy import ndarray
 from skimage import measure
 import cv2
-from ImageSet import ImageSet
+from ImageSet import ImageSet, get_dataloader
 import os.path as osp
 import os
 from utils import gen_voc_imageids, gen_objdis_imageids
@@ -33,29 +33,28 @@ class DDT(object):
 
         self.feature_dim = 512
 
-        self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],#,[123.68,  116.779, 103.939]
-                                     std=[0.229, 0.224, 0.225])#, [1,1,1]
-
         # self.normalize = transforms.Normalize(mean=[123.68,  116.779, 103.939],#,
         #                              std=[1,1 ,1])#, [1,1,1]
+        
+        self.transform=transforms.Compose([
+                       transforms.ToTensor(),transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225]),
+                   ])
 
-        self.totensor = transforms.ToTensor()
-        self.dataset = None
+        self.data_loader = None
         self.traindir = None
         self.trainids = None
+        self.resize = 800
 
     def fit(self, traindir, image_ids=None):
-        self.dataset = ImageSet(traindir, image_ids=image_ids, resize=800)
+        self.data_loader = get_dataloader(traindir, transform = self.transform, image_ids=image_ids, resize=self.resize)
         self.traindir = traindir
         self.trainids = image_ids
-        train_dataset = self.dataset
+        train_loader = self.data_loader
 
         descriptors = np.zeros((1, self.feature_dim))
         print("fiting...")
-        for index in tqdm(range(len(train_dataset))):
-            image = train_dataset[index]
-            h, w = image.shape[:2]
-            image = self.normalize(self.totensor(image)).view(1, 3, h, w)
+        for index, image in tqdm(enumerate(train_loader)):
             if self.use_cuda:
                 image=image.cuda()
 
@@ -76,21 +75,21 @@ class DDT(object):
         return trans_vec, descriptors_mean_tensor
 
     def co_locate(self, testdir,  savedir, trans_vector, descriptor_mean_tensor, image_ids=None):
-        if testdir == self.traindir and set(self.trainids) == set(image_ids):
-            test_dataset = self.dataset
+        is_imageids_same = (set(self.trainids) == set(image_ids)) if (image_ids is not None and self.trainids is not None) else True
+        if (testdir == self.traindir) and is_imageids_same:
+            test_loader = self.data_loader
         else:
-            test_dataset = ImageSet(testdir, image_ids=image_ids, resize=800)
+            test_loader = get_dataloader(testdir, transform=self.transform, image_ids=image_ids, resize=self.resize)
         
         if self.use_cuda:
             descriptor_mean_tensor = descriptor_mean_tensor.cuda()
         print("colocate...")
         result_file = open(osp.join(savedir, "result.txt"), "w")
-        for index in tqdm(range(len(test_dataset))):
-            image = test_dataset[index]
-            img_id = osp.basename(test_dataset.img_paths[index]).split(".")[0]
-            origin_image = image.copy()
+        for index, image in tqdm(enumerate(test_loader)):
+            img_id = osp.basename(test_loader.dataset.img_paths[index]).split(".")[0]
+            origin_image = cv2.imread(test_loader.dataset.img_paths[index])
             origin_height, origin_width = origin_image.shape[:2]
-            image = self.normalize(self.totensor(image)).view(1, 3, origin_height, origin_width)
+           
             if self.use_cuda:
                 image = image.cuda()
             featmap = self.pretrained_feature_model(image)[0, :]

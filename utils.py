@@ -104,7 +104,6 @@ def gen_voc_imageids(data_root, category):
         lines = [line.strip("\n") for line in f.readlines()]
 
     ret=[]        
-    org_count=0
     skiped=[]
     for line in lines:
         split_tmp = line.split()
@@ -112,8 +111,6 @@ def gen_voc_imageids(data_root, category):
         if tag == "1":
             xml_file = osp.join(ann_dir, imageid + ".xml")
             xml_info = parse_rec(xml_file)
-            org_count+=1
-            # print(org_count)
             add_flag=False
             for obj in xml_info:
                 if obj['name']==category and obj["difficult"] == 0 and obj["truncated"] == 0:
@@ -124,8 +121,6 @@ def gen_voc_imageids(data_root, category):
             else:
                 skiped.append(imageid)
 
-
-    #print("skip: %s"%str(skiped))
     return ret
 
 def gen_objdis_imageids(image_dir, filter_noise=True):
@@ -141,14 +136,13 @@ def gen_objdis_imageids(image_dir, filter_noise=True):
             else:
                 skiped.append(imageid)
                 
-    print("%s: skiped: %d; %s"%(image_dir, len(skiped), str(skiped)))
+    #print("%s: skiped: %d; %s"%(image_dir, len(skiped), str(skiped)))
     return imageids
 
 def results_table_form(results):
     table = PrettyTable(results.keys())
     table.padding_width = 1 # One space between column edges and contents (default)
     table.add_row(results.values())
-    #print(table)
     return table
 
 if __name__ == "__main__":

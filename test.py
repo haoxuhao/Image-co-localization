@@ -29,6 +29,13 @@ def co_locate(model, args):
         args.testdir = "./datasets/VOC2007/JPEGImages"
         args.savedir = "./data/result/%s-%s"%(args.dataset_type, args.category)
         val_image_ids = gen_voc_imageids("./datasets/VOC2007", args.category)
+    elif args.dataset_type == Dataset.voc12:
+        if not args.category in Dataset.voc_classes:
+            raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
+        args.traindir = "./datasets/VOC2012/JPEGImages"
+        args.testdir = "./datasets/VOC2012/JPEGImages"
+        args.savedir = "./data/result/%s-%s"%(args.dataset_type, args.category)
+        val_image_ids = gen_voc_imageids("./datasets/VOC2012", args.category)
     elif args.dataset_type == Dataset.objdis:
         if not args.category in Dataset.objdis_classes:
             raise Exception("no such category: %s in dataset %s"%(args.category, args.dataset_type)) 
@@ -38,7 +45,7 @@ def co_locate(model, args):
         val_image_ids = gen_objdis_imageids(args.traindir)
     else:
         val_image_ids = [file.split(".")[0] for file in os.listdir(args.traindir)]
-        # raise Exception("no such dataset type: %s"%args.dataset_type)
+        
 
     print("images of category: %s: %d"%(args.category, len(val_image_ids)))
     if not osp.exists(args.savedir):
@@ -49,12 +56,14 @@ def co_locate(model, args):
 
 def main():
     args = parse_arg()
-    args.dataset_type = "objdis"
+    args.dataset_type = "voc12"
     
     if args.dataset_type == Dataset.voc07:
         args.categories = Dataset.voc_classes
     elif args.dataset_type == Dataset.objdis:
         args.categories = Dataset.objdis_classes
+    elif args.dataset_type == Dataset.voc12:
+        args.categories = Dataset.voc_classes
     else:
         raise Exception("datset type not found: %s"%args.dataset_type)
 

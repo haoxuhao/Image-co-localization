@@ -8,7 +8,7 @@ import numpy as np
 from numpy import ndarray
 from skimage import measure
 import cv2
-from ImageSet import ImageSet
+from ImageSet import ImageSet,get_dataloader
 import os.path as osp
 import os
 from DDT import DDT
@@ -27,24 +27,30 @@ class DDTplus(DDT):
 
         #加载预训练模型
         self.pretrained_feature_model = models.vgg19(pretrained=True).features
+        print()
         if self.use_cuda:
             self.pretrained_feature_model = self.pretrained_feature_model.cuda()
 
-        self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-        self.totensor = transforms.ToTensor()
+        self.transform=transforms.Compose([
+                transforms.ToTensor(),transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225]),
+            ])
+
+        self.data_loader = None
+        self.traindir = None
+        self.trainids = None
+        self.resize = 800
 
     def fit(self, traindir, image_ids=None):
-        train_dataset = ImageSet(traindir, image_ids=image_ids, resize=1000)
+        self.data_loader = get_dataloader(traindir, transform = self.transform, image_ids=image_ids, resize=self.resize)
+        self.traindir = traindir
+        self.trainids = image_ids
+        train_loader = self.data_loader
 
         descriptors0 = np.zeros((1, 512))
         descriptors1 = np.zeros((1, 512))
         print("fiting...")
-        for index in tqdm(range(len(train_dataset))):
-            #print("processing "+str(index)+"th training images.")
-            image = train_dataset[index]
-            h, w = image.shape[:2]
-            image = self.normalize(self.totensor(image)).view(1, 3, h, w)
+        for index, image in tqdm(enumerate(train_loader)):
             if self.use_cuda:
                 image = image.cuda()
             for i, layer in enumerate(self.pretrained_feature_model):
@@ -79,15 +85,18 @@ class DDTplus(DDT):
         return (trans_vec0, trans_vec1), [descriptors0_mean_tensor, descriptors1_mean_tensor]
 
     def co_locate(self, testdir, savedir, trans_vectors, descriptor_mean_tensors, image_ids=None):
-        test_dataset = ImageSet(testdir, image_ids=image_ids, resize=1000)
+        is_imageids_same = (set(self.trainids) == set(image_ids)) if (image_ids is not None and self.trainids is not None) else True
+        if (testdir == self.traindir) and is_imageids_same:
+            test_loader = self.data_loader
+        else:
+            test_loader = get_dataloader(testdir, transform=self.transform, image_ids=image_ids, resize=self.resize)
         result_file = open(osp.join(savedir, "result.txt"), "w")
         print("colocate...")
-        for index in tqdm(range(len(test_dataset))):
-            image = test_dataset[index]
-            img_id = osp.basename(test_dataset.img_paths[index]).split(".")[0]
-            origin_image = image.copy()
+        for index, image in tqdm(enumerate(test_loader)):
+            img_id = osp.basename(test_loader.dataset.img_paths[index]).split(".")[0]
+            origin_image = cv2.imread(test_loader.dataset.img_paths[index])
+
             origin_height, origin_width = origin_image.shape[:2]
-            image = self.normalize(self.totensor(image)).view(1, 3, origin_height, origin_width)
             if self.use_cuda:
                 image = image.cuda()
                 descriptor_mean_tensors[0] = descriptor_mean_tensors[0].cuda()
@@ -145,7 +154,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--traindir', type=str, default='./data/car', help="the train data folder path.")
     parser.add_argument('--testdir', type=str, default='./data/car', help="the test data folder path.")
-    parser.add_argument('--savedir', type=str, default='./data/result/car', help="the final result saving path. ")
+    parser.add_argument('--savedir', type=str, default='./data/result/tmp', help="the final result saving path. ")
     parser.add_argument('--select_layers', type=tuple, default=(34, 36), help="two selected layers index. Note that the output channel should be 512. ")
     parser.add_argument("--gpu", type=str, default="0", help="cuda device to run")
     args = parser.parse_args()

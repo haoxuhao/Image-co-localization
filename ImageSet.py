@@ -8,34 +8,48 @@ from torch.utils.data import Dataset, DataLoader
 import os.path as osp
 
 class ImageSet(Dataset):
-    def __init__(self, folder_path, image_ids=None, resize=None):
-        if image_ids is not None:
-            files = [id + ".jpg" for id in image_ids]
-        else:
-            files = os.listdir(folder_path)
-        self.images = []
-        self.img_paths = []
-        for file in files:
-            if not os.path.isdir(file):
-                img_path = osp.join(folder_path, file)
-                self.img_paths.append(img_path)
-                tmp_image = cv2.imread(img_path)
-                tmp_image = tmp_image[:,:,::-1].copy()
-                #tmp_image = np.float32(tmp_image)
-                self.images.append(tmp_image)
+    def __init__(self, folder_path, transform = None, image_ids=None, resize=None):
+        if not osp.exists(folder_path):
+            raise IOError("image folder not exists: %s"%folder_path)
 
+        if image_ids is not None:
+            self.img_paths = [osp.join(folder_path, id + ".jpg") for id in image_ids]
+        else:
+            self.img_paths = [osp.join(folder_path, file) for file in os.listdir(folder_path)
+                   if (file.find(".jpg")!=-1 or file.find(".png") != -1)]
+
+        self.nSamples = len(self.img_paths)
+        self.resize = resize
+        self.transform = transform
         if resize is not None:
-            rescaler = Rescale(resize)
-            for i in range(len(self.images)):
-                self.images[i] = rescaler(self.images[i])
+            self.rescaler = Rescale(resize)
 
     def __getitem__(self, index):
-        return self.images[index]
+        assert index < self.nSamples, 'index range error' 
+        img_path = self.img_paths[index]
+        if not osp.exists(img_path):
+            raise IOError("no such file: %s"%img_path)
+        image = cv2.imread(img_path)
+        image = image[:,:,::-1].copy() #BGR to RGB
+        if self.resize is not None:
+            image = self.rescaler(image)
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image
 
     def __len__(self):
-        return len(self.images)
+        return self.nSamples
 
+def get_dataloader(imagedir, transform=None, image_ids=None, resize=None, batch_size=1):
+    loader = DataLoader(
+            ImageSet(imagedir, transform=transform, image_ids=image_ids, resize=resize),
+            batch_size=batch_size,
+            num_workers=4
+    )
 
+    return loader
 
 if __name__ == '__main__':
     img0 = cv2.imread('./data/airplane/0029.jpg')
