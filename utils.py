@@ -2,6 +2,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 import os.path as osp
 import os
+from prettytable import PrettyTable
 
 '''
 borrowed from darknet
@@ -133,6 +134,13 @@ def gen_objdis_imageids(image_dir):
 			imageids.append(file.split(".")[0])
 
 	return imageids
+
+def results_table_form(results):
+    table = PrettyTable(results.keys())
+    table.padding_width = 1 # One space between column edges and contents (default)
+    table.add_row(results.values())
+    #print(table)
+    return table
 
 if __name__ == "__main__":
     #test one to many iou

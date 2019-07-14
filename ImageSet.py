@@ -20,6 +20,9 @@ class ImageSet(Dataset):
                 img_path = osp.join(folder_path, file)
                 self.img_paths.append(img_path)
                 tmp_image = cv2.imread(img_path)
+                tmp_image = tmp_image[:,:,::-1].copy()
+                #tmp_image = np.float32(tmp_image)
+                #print(tmp_image.shape)
                 self.images.append(tmp_image)
 
         if resize is not None:

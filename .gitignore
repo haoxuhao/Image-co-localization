@@ -116,7 +116,10 @@ venv.bak/
 
 #datasets
 datasets/
-
+models
 data/result/voc*
 __pycache__/*
 data/result/objdis*
+data/tmp
+
+data/result/tmp
