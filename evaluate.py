@@ -80,7 +80,7 @@ def parse_arg():
 
 def main():
     args = parse_arg()
-    args.dataset_type = "voc07"
+    args.dataset_type = "objdis"
     if args.dataset_type == Dataset.objdis:
         args.categories = Dataset.objdis_classes
     elif args.dataset_type == Dataset.voc07:

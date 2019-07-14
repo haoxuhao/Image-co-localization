@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import os.path as osp
 import os
 from prettytable import PrettyTable
+import cv2
 
 '''
 borrowed from darknet
@@ -127,13 +128,21 @@ def gen_voc_imageids(data_root, category):
     #print("skip: %s"%str(skiped))
     return ret
 
-def gen_objdis_imageids(image_dir):
-	imageids = []
-	for file in os.listdir(image_dir):
-		if file.find(".jpg") != -1:
-			imageids.append(file.split(".")[0])
-
-	return imageids
+def gen_objdis_imageids(image_dir, filter_noise=True):
+    imageids = []
+    skiped = []
+    for file in os.listdir(image_dir):
+        if file.find(".jpg") != -1:
+            imageid = file.split(".")[0]
+            gt_image_path = osp.join(image_dir, "GroundTruth", imageid+".png")
+            gt_img = cv2.imread(gt_image_path)
+            if np.sum(gt_img) > 1:
+                imageids.append(imageid)
+            else:
+                skiped.append(imageid)
+                
+    print("%s: skiped: %d; %s"%(image_dir, len(skiped), str(skiped)))
+    return imageids
 
 def results_table_form(results):
     table = PrettyTable(results.keys())

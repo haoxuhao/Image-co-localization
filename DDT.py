@@ -32,10 +32,13 @@ class DDT(object):
             self.pretrained_feature_model = self.pretrained_feature_model.cuda()
 
         self.feature_dim = 512
-        #print(self.pretrained_feature_model)
-        #sys.exit(-1)
+
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],#,[123.68,  116.779, 103.939]
                                      std=[0.229, 0.224, 0.225])#, [1,1,1]
+
+        # self.normalize = transforms.Normalize(mean=[123.68,  116.779, 103.939],#,
+        #                              std=[1,1 ,1])#, [1,1,1]
+
         self.totensor = transforms.ToTensor()
         self.dataset = None
         self.traindir = None

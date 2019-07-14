@@ -31,7 +31,7 @@ DDTplus:
 
 |impl | Airplane |  Car  | Horse |  Mean |
 |--|--|--|--|--|
-|here(DDT)|  73.0   | 65.0 |  80.0 | 72.7 |
+|here(DDT)| 82.9   | 70.8 |  81.7 | 78.5  |
 | paper |  91.46   | 95.51 | 77.42 | 88.13 |
 
 ## VOC 07
