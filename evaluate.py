@@ -72,16 +72,17 @@ def objdis_eval(category, dataset_type):
 def parse_arg():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset_type", "-dset_type", type=str, default="voc07", help="dataset type")
-    parser.add_argument("--category", "-cate", type=str, default="aeroplane", help="category")
+    parser.add_argument("--dataset_type", "-dset_type", type=str, default="objdis", help="dataset type")
+    parser.add_argument("--category", "-cate", type=str, default=None, help="category")
 
     args = parser.parse_args()
     return args
 
 def main():
     args = parse_arg()
-    args.dataset_type = "voc12"
-    if args.dataset_type == Dataset.objdis:
+    if args.category and args.dataset_type in [Dataset.objdis, Dataset.voc07, Dataset.voc12]:
+        args.categories=[args.category]
+    elif args.dataset_type == Dataset.objdis:
         args.categories = Dataset.objdis_classes
     elif args.dataset_type == Dataset.voc07:
         args.categories = Dataset.voc_classes#["Airplane"]

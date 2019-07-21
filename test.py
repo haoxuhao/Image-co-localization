@@ -17,6 +17,8 @@ def parse_arg():
     parser.add_argument('--select_layers', type=tuple, default=(34, 36), help="two selected layers index. Note that the output channel should be 512. ")
     parser.add_argument("--gpu", type=str, default="0", help="cuda device to run")
     parser.add_argument("--algorithm", "-a", type=str, default="ddt", help="algorithm to use")
+    parser.add_argument("--dataset_type", "-dset_type", type=str, default="objdis", help="dataset type")
+    parser.add_argument("--category", "-cate", type=str, default=None, help="category")
     args = parser.parse_args()
     return args
 
@@ -56,9 +58,10 @@ def co_locate(model, args):
 
 def main():
     args = parse_arg()
-    args.dataset_type = "voc12"
-    
-    if args.dataset_type == Dataset.voc07:
+    args.dataset_type = "objdis"
+    if args.category and args.dataset_type in [Dataset.objdis, Dataset.voc07, Dataset.voc12]:
+        args.categories=[args.category]
+    elif args.dataset_type == Dataset.voc07:
         args.categories = Dataset.voc_classes
     elif args.dataset_type == Dataset.objdis:
         args.categories = Dataset.objdis_classes
