@@ -17,6 +17,10 @@ from config import Dataset
 from tqdm import tqdm
 import sys
 from models.vgg19_pt_mcn import Vgg19_pt_mcn, vgg19_pt_mcn
+from densecrf import do_crf
+from roi_pooling import RoiHead
+from utils import load_rois
+
 
 class DDT(object):
     def __init__(self, use_cuda=False):
@@ -100,6 +104,7 @@ class DDT(object):
             del featmap
 
             P = np.dot(trans_vector, features.transpose()).reshape(h, w)
+            P = do_crf(origin_image, P)
 
             mask = self.max_conn_mask(P, origin_height, origin_width)
             bboxes = self.get_bboxes(mask)

@@ -23,7 +23,7 @@ def load_voc_gts(img_ids, ann_dir):
     return gts
 
 
-def eval_corloc(result_file, gts, iou_thresh=0.5):
+def eval_corloc(result_file, gts, iou_thresh=0.4):
     if not osp.exists(result_file):
         raise IOError("no such file: %s"%result_file)
     with open(result_file,"r") as f:
