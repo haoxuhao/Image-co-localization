@@ -115,8 +115,10 @@ venv.bak/
 .mypy_cache/
 
 #datasets
-datasets/
-models
+datasets/ObjectDiscovery-data
+datasets/VOC2007
+datasets/VOC2012
+models/matconvnet
 data/result/voc*
 __pycache__/*
 data/result/objdis*

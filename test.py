@@ -2,12 +2,13 @@
 
 from DDT import *
 from DDTplus import *
+from pps_ddt import Pps_DDT
 import os.path as osp
 import os
 from utils import gen_voc_imageids, gen_objdis_imageids
 from config import Dataset
 import argparse
-
+from cluster.spherical_cluster_method import Sphere
 
 def parse_arg():
     parser = argparse.ArgumentParser()
@@ -58,7 +59,7 @@ def co_locate(model, args):
 
 def main():
     args = parse_arg()
-    args.dataset_type = "objdis"
+    #args.dataset_type = "objdis"
     if args.category and args.dataset_type in [Dataset.objdis, Dataset.voc07, Dataset.voc12]:
         args.categories=[args.category]
     elif args.dataset_type == Dataset.voc07:
@@ -79,6 +80,10 @@ def main():
         model = DDT(use_cuda=use_cuda)
     elif args.algorithm == "ddtplus":
         model = DDTplus(args.select_layers, use_cuda=use_cuda)
+    elif args.algorithm == "Pps_DDT":
+        model = Pps_DDT(use_cuda=use_cuda)
+    elif args.algorithm == "sphere_cluster":
+        model = Sphere(use_cuda=use_cuda)
     else:
         raise Exception("algorithm: %s has not been implemented yet!"%args.algorithm) 
 

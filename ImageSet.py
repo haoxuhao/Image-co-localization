@@ -33,7 +33,13 @@ class ImageSet(Dataset):
         image = image[:,:,::-1].copy() #BGR to RGB
         if self.resize is not None:
             image = self.rescaler(image)
-
+        
+        h,w,_ = image.shape
+        divisor = 32
+        h += (divisor-h%divisor)
+        w += (divisor-w%divisor)
+        #print(h%divisor)
+        image = cv2.resize(image, (w, h))
         if self.transform is not None:
             image = self.transform(image)
 

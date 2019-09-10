@@ -96,6 +96,19 @@ def parse_rec(filename):
 
     return objects
 
+def load_voc_gts(img_ids, ann_dir):
+    '''
+    load voc style gts
+    param img_ids: list of str
+    param ann_dir: ann dir
+    return dict: {img_id: np.array([[x1,y1,x2,y2], ..., ])}
+    '''
+    gts={}
+    for id in img_ids:
+        xml_file = osp.join(ann_dir, id+".xml")
+        gts[id] = np.array([item['bbox'] for item in parse_rec(xml_file)])
+    return gts
+
 def gen_voc_imageids(data_root, category):
     if not osp.exists(data_root):
         raise IOError("no such directory: %s"%data_root)
@@ -170,7 +183,7 @@ def gen_image_proposals(img, min_size=10):
         candidates.add(r['rect'])
     return candidates
 
-def load_rois(img_path):
+def load_rois(img_path, filter_wh=(20, 20)):
     if not osp.exists(img_path):
         raise FileExistsError("%s file not found"%img_path)
     pps_path = img_path.replace("100", "100-pps").replace(".jpg", ".json")
@@ -178,6 +191,7 @@ def load_rois(img_path):
         return None
     with open(pps_path) as f:
         pps = json.load(f)["proposals"]
+    pps = [p for p in pps if p[2]>filter_wh[0] and p[3]>filter_wh[1]]
     return np.array(pps)
 
 def gen_dataset_proposals(image_paths, output_dir, min_size=10):
@@ -215,7 +229,7 @@ if __name__ == "__main__":
 
     #gen datasets proposals
     objdis_root = "./datasets/ObjectDiscovery-data/Data"
-    categories = ["Car"]
+    categories = ["Horse", "Airplane"]
     for category in tqdm(categories):
         images_dir = osp.join(objdis_root, category+"100")
         proposals_save_dir = osp.join(objdis_root, category+"100-pps")
@@ -223,6 +237,6 @@ if __name__ == "__main__":
         image_paths = [osp.join(images_dir, file) for file in os.listdir(images_dir)\
             if file.find(".jpg") != -1]
 
-        #gen_dataset_proposals(image_paths, proposals_save_dir)
-        print(load_rois(image_paths[0]))
+        gen_dataset_proposals(image_paths, proposals_save_dir)
+        #print(load_rois(image_paths[0]).shape)
         

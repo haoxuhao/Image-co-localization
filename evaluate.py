@@ -3,32 +3,21 @@
 
 import os
 import os.path as osp
-from utils import iou_one2many, parse_rec, gen_voc_imageids, gen_objdis_imageids,results_table_form
+from utils import iou_one2many, parse_rec, gen_voc_imageids, gen_objdis_imageids,results_table_form,load_voc_gts
 import numpy as np
 from config import Dataset
 import argparse
 from tqdm import tqdm
 
-def load_voc_gts(img_ids, ann_dir):
-    '''
-    load voc style gts
-    param img_ids: list of str
-    param ann_dir: ann dir
-    return dict: {img_id: np.array([[x1,y1,x2,y2], ..., ])}
-    '''
-    gts={}
-    for id in img_ids:
-        xml_file = osp.join(ann_dir, id+".xml")
-        gts[id] = np.array([item['bbox'] for item in parse_rec(xml_file)])
-    return gts
 
-
-def eval_corloc(result_file, gts, iou_thresh=0.4):
+def eval_corloc(result_file, gts, iou_thresh=0.5):
     if not osp.exists(result_file):
         raise IOError("no such file: %s"%result_file)
     with open(result_file,"r") as f:
         preds = [line.strip("\n") for line in f.readlines()]
-
+    if len(preds)==0:
+        print("error: no dets been found")
+        return 0
     results = np.zeros((len(preds),))
     error_file = open(osp.join(osp.dirname(result_file), "error.txt"), "w")
     for i, pred in enumerate(preds):

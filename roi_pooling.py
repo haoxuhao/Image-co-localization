@@ -31,14 +31,16 @@ class RoiHead(torch.nn.Module):
         N = 0
         for item in images_proposals:
             N += item.shape[0]
-
+        
         output = torch.zeros(N, c, self.output_size[1], self.output_size[0])
         k=0
         for i in range(b):
             item = images_proposals[i]
             for j in range(item.shape[0]):
                 x, y, w, h = item[j,:]//self.feature_stride
-                roi_data = self.pool(features[i, :, y:y+h, x:x+w])
+                #roi_data = self.pool(features[i, :, y:y+h, x:x+w])
+                roi_data = features[i, :, y+h//2:y+h//2+1, x+w//2:x+w//2+1]
+                #print(roi_data.shape)
                 output[k, :, :, :] = roi_data
                 k+=1
 

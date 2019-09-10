@@ -24,7 +24,7 @@ import torch.nn.functional as F
 
 
 
-class DDT(object):
+class Pps_DDT(object):
     def __init__(self, use_cuda=False):
         #加载预训练模型
         if not torch.cuda.is_available():
@@ -68,13 +68,13 @@ class DDT(object):
 
             output = self.pretrained_feature_model(image)[0, :]
             #output = F.normalize(output, p=2, dim=0)
-            output = output.view(self.feature_dim, output.shape[1] * output.shape[2])
+            #output = output.view(self.feature_dim, output.shape[1] * output.shape[2])
             nsamples+=output.shape[1]
-            # output = self.pretrained_feature_model(image)
-            # rois = load_rois(train_loader.dataset.img_paths[index])
-            # if rois is not None:
-            #     output = self.roi_pool(output, [rois])
-            #output = output.view(self.feature_dim, output.shape[0]*output.shape[2]*output.shape[3])
+            output = self.pretrained_feature_model(image)
+            rois = load_rois(train_loader.dataset.img_paths[index])
+            if rois is not None:
+                output = self.roi_pool(output, [rois])
+            output = output.view(self.feature_dim, output.shape[0]*output.shape[2]*output.shape[3])
             output = output.transpose(0, 1)
             descriptors = np.vstack((descriptors, output.detach().cpu().numpy().copy()))
             del output
@@ -107,36 +107,36 @@ class DDT(object):
            
             if self.use_cuda:
                 image = image.cuda()
-            featmap = self.pretrained_feature_model(image)[0, :]
-            #featmap = F.normalize(featmap, p=2, dim=0)
-            h, w = featmap.shape[1], featmap.shape[2]
-            featmap = featmap.view(self.feature_dim, -1).transpose(0, 1)
+            # featmap = self.pretrained_feature_model(image)[0, :]
+            # #featmap = F.normalize(featmap, p=2, dim=0)
+            # h, w = featmap.shape[1], featmap.shape[2]
+            # featmap = featmap.view(self.feature_dim, -1).transpose(0, 1)
 
-            #output = self.pretrained_feature_model(image)
-            # rois = load_rois(test_loader.dataset.img_paths[index])
-            # if rois is not None:
-            #     output = self.roi_pool(output, [rois])
-            #output = output.view(self.feature_dim, output.shape[0]*output.shape[2]*output.shape[3])
-            #output = output.transpose(0, 1)
-            #featmap = output.cuda()
+            output = self.pretrained_feature_model(image)
+            rois = load_rois(test_loader.dataset.img_paths[index])
+            if rois is not None:
+                output = self.roi_pool(output, [rois])
+            output = output.view(self.feature_dim, output.shape[0]*output.shape[2]*output.shape[3])
+            output = output.transpose(0, 1)
+            featmap = output.cuda()
             featmap -= descriptor_mean_tensor.repeat(featmap.shape[0], 1)
             features = featmap.detach().cpu().numpy()
             del featmap
 
-            P = np.dot(trans_vector, features.transpose()).reshape(h, w)
+            #P = np.dot(trans_vector, features.transpose()).reshape(h, w)
             #P = do_crf(origin_image, P)
 
-            #P = np.dot(trans_vector, features.transpose())
-            #max_score_idx = np.argmax(P)
-            # bboxes = []
-            # for i in range(P.shape[0]):
-            #     if P[i]>0:
-            #         bbox = rois[i, :]
-            #         bboxes.append(bbox)
-            # mask = np.zeros((1, origin_height, origin_width), dtype=np.uint16)
+            P = np.dot(trans_vector, features.transpose())
+            max_score_idx = np.argmax(P)
+            bboxes = []
+            for i in range(P.shape[0]):
+                if P[i]>0 and i==max_score_idx:
+                    bbox = rois[i, :]
+                    bboxes.append(bbox)
+            mask = np.zeros((1, origin_height, origin_width), dtype=np.uint16)
             # sys.exit()
-            mask = self.max_conn_mask(P, origin_height, origin_width)
-            bboxes = self.get_bboxes(mask)
+            # mask = self.max_conn_mask(P, origin_height, origin_width)
+            # bboxes = self.get_bboxes(mask)
 
             mask_3 = np.concatenate(
                 (np.zeros((2, origin_height, origin_width), dtype=np.uint16), mask * 255), axis=0)

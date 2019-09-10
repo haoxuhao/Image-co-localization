@@ -30,6 +30,5 @@ class Rescale(object):
             new_h, new_w = self.output_size
 
         new_h, new_w = int(new_h), int(new_w)
-
         # cv2做resize时长宽定义是反过来的。。。
         return cv2.resize(image, (new_w, new_h))
