@@ -1,9 +1,15 @@
-# Deep-Descriptor-Transforming
-This is an DDT implementation by pytorch. The paper is ["Deep Descriptor Transforming for Image Co-Localization"](https://www.researchgate.net/publication/316780426_Deep_Descriptor_Transforming_for_Image_Co-Localization).
-***
-# Results
+# Image co-localization
+This repo is forked from [Deep-Descriptor-Transforming](https://github.com/FancyYan123/Deep-Descriptor-Transforming). 
 
-DDT:
+### New features
+- Spherical cluster method added [paper](https://www.jstage.jst.go.jp/article/mta/7/1/7_2/_article/-char/ja/).
+- Test and evaluation script added.
+- VOC & Object discovery dataset preprocessing.
+
+***
+# Visualizations
+
+[DDT](https://www.researchgate.net/publication/316780426_Deep_Descriptor_Transforming_for_Image_Co-Localization)
 -
 <table>
     <tr>
