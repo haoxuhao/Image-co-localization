@@ -1,5 +1,5 @@
 # Image co-localization
-This repo is forked from [Deep-Descriptor-Transforming](https://github.com/FancyYan123/Deep-Descriptor-Transforming). 
+This repo is initially based on the [Deep-Descriptor-Transforming](https://github.com/FancyYan123/Deep-Descriptor-Transforming). 
 
 ### New features
 - Spherical cluster method added [paper](https://www.jstage.jst.go.jp/article/mta/7/1/7_2/_article/-char/ja/).
